@@ -1,0 +1,32 @@
+function traj = CartesianVelTrajectory(Xstart, Xend, Tf, N, method)
+
+timegap = Tf / (N - 1);
+traj = cell(1, N);
+[Rstart, pstart] = TransToRp(Xstart);
+[Rend, pend] = TransToRp(Xend);
+for i = 1: N
+    if method == 3
+        s = CubicTimeScaling(Tf,timegap * (i - 1));
+        sdot = CubicTimeScalingDot(Tf,timegap * (i - 1));
+    else
+        s = QuinticTimeScaling(Tf,timegap * (i - 1));
+        sdot = QuinticTimeScalingDot(Tf,timegap * (i - 1));
+    end
+    w_se = MatrixLog3(Rstart' * Rend);
+    [omghat, theta] = AxisAng3(w_se)
+    
+    Rs = Rstart * MatrixExp3(MatrixLog3(Rstart'*Rend) * s);
+    theta  = norm(MatrixLog3(Rstart'*Rend) )* s ;
+    dthetads = norm(MatrixLog3(Rstart'*Rend) );
+    if NearZero(theta)
+        Rdot= MatrixLog3(Rstart'*Rend) / norm(MatrixLog3(Rstart'*Rend) ) + 2 * MatrixLog3(Rstart'*Rend) / norm(MatrixLog3(Rstart'*Rend) ) * MatrixLog3(Rstart'*Rend)  / norm(MatrixLog3(Rstart'*Rend) );
+    else
+        Rdot =norm(MatrixLog3(Rstart'*Rend) )*cos(norm(MatrixLog3(Rstart'*Rend) )* s ) * MatrixLog3(Rstart'*Rend)  / norm(MatrixLog3(Rstart'*Rend) ) + (1 + norm(MatrixLog3(Rstart'*Rend) )*sin(norm(MatrixLog3(Rstart'*Rend) )* s)) * MatrixLog3(Rstart'*Rend) / norm(MatrixLog3(Rstart'*Rend) ) * MatrixLog3(Rstart'*Rend) / norm(MatrixLog3(Rstart'*Rend) );
+    end
+    Rdot2 = MatrixLog3(Rstart'*Rend);
+    w = so3ToVec(Rdot*Rs*sdot);
+    traj{i} ...
+    = [w ; ...
+       sdot * (pend - pstart)];
+end
+end

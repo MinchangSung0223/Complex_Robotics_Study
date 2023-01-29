@@ -39,10 +39,18 @@ function drawRobot(M,Slist,thetalist,T0,p_list,txt,base_txt,ax,actuated_num)
         end
         Ti = exps*Mlist{i};
         if isBase ==0
-            drawAxis(Ti,linelength/2, lineWidth*2,T0,0.3,base_txt,ax,actuated_num(i));
+            if find(actuated_num==i)
+                drawAxis(Ti,linelength/2, lineWidth*2,T0,0.3,base_txt,ax,1);
+            else
+                drawAxis(Ti,linelength/2, lineWidth*2,T0,0.3,base_txt,ax,0);
+            end
             isBase = 1;
         else
-            drawAxis(Ti,linelength/2, lineWidth*2,T0,0.3,"",ax,actuated_num(i));
+            if find(actuated_num==i)
+                drawAxis(Ti,linelength/2, lineWidth*2,T0,0.3,"",ax,1);
+            else
+                drawAxis(Ti,linelength/2, lineWidth*2,T0,0.3,"",ax,0);
+            end
         end
 
     end    

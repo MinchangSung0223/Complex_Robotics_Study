@@ -59,6 +59,8 @@ axis(axisLimit)
 cla
 t = 0;
 step_count = 0;
+q_a = q_r(1:4);
+q_p = [q_r(5:end)' q_l']';
 for i = 1:1:1000
     t = t+dt;
 
@@ -70,9 +72,22 @@ for i = 1:1:1000
     Ha= Adjoint(TbLeef)*Jb_L; % Actuated Jacobian Matrix, q_a = q_l
     Hp= -Adjoint(TbReef)*Jb_R; % Passive Jacobian Matrix, q_p = q_r
     qdot_r= -pinv(Hp)*Ha*qdot_l;
+    Hp = [Ha(:,5:end) Hp];
+    Ha = Ha(:,1:4);
     
+    qdot_a = pinv(Ha)*Vb_Leefb;
+    qdot_p = -pinv(Hp)*Ha*qdot_a;
+
+
     [q_l,qdot_l]=EulerStep(q_l,qdot_l,[0,0,0,0,0,0]',dt);
     [q_r,qdot_r]=EulerStep(q_r,qdot_r,[0,0,0,0,0,0]',dt);
+
+    [q_a,qdot_a]=EulerStep(q_a,qdot_a,[0,0,0]',dt);
+    [q_p,qdot_p]=EulerStep(q_p,qdot_p,[0,0,0,0,0,0,0,0,0]',dt);
+
+    q_l = [q_a(1) q_a(2) q_a(3) q_a(4) q_p(1) q_p(2)]';
+    q_r = q_p(4:end);
+
     T_L = FKinSpace(Left_M,Left_Slist,q_l);
     T_R = FKinSpace(Right_M,Right_Slist,q_r);
     Jb_L = JacobianBody(Left_Blist,q_l);
@@ -81,8 +96,8 @@ for i = 1:1:1000
     %% DRAW
     if step_count > 40
     cla
-    drawRobot(Left_M,Left_Slist,q_l,T0L,Left_p,"\{Leef\}","\{L\}",ax,[1,1,1,1,1,1])
-    drawRobot(Right_M,Right_Slist,q_r,T0R,Right_p,"\{Reef\}","\{R\}",ax,[2,2,2,2,2,2])
+    drawRobot(Left_M,Left_Slist,q_l,T0L,Left_p,"\{Leef\}","\{L\}",ax)
+    drawRobot(Right_M,Right_Slist,q_r,T0R,Right_p,"\{Reef\}","\{R\}",ax)
     width = 2;
     height = 2;
     drawBox(T0L*T_L*TransInv(TbLeef),width,height,ax)

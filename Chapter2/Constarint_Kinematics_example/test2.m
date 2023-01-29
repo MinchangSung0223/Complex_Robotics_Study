@@ -36,13 +36,20 @@ q_r = [-pi/2,pi/6,pi/6,pi/6,pi/6,pi/6]';
 %% Robot Inverse Kinematics
 q_l=wrapToPi(IKinSpace(Left_Slist,Left_M,TLLeef,q_l,0.01,0.001));
 q_r=wrapToPi(IKinSpace(Right_Slist,Right_M,TRReef,q_r,0.01,0.001));
+
 %% Robot Forward Kinematics
 T_L = FKinSpace(Left_M,Left_Slist,q_l)
 T_R = FKinSpace(Right_M,Right_Slist,q_r)
 %% Robot Jacobian 
 Jb_L = JacobianBody(Left_Blist,q_l);
 Jb_R = JacobianBody(Right_Blist,q_r);
+actuated_num = [1,3,5]
+passive_num = [2,4,6]
 
+q_a = q_l(actuated_num)
+Jb_a = Jb_L(:,actuated_num);
+q_p = [q_l(passive_num)' q_r']';
+Jb_p = [Jb_L(:,passive_num),Jb_R];
 %% Simulation Setup
 dt = 0.001
 fignum = 1;
@@ -62,32 +69,56 @@ step_count = 0;
 for i = 1:1:1000
     t = t+dt;
 
-    Vb_b = [0 0 exp(-5*t) 0 0 0]'; % Box Body Twist
+    Vb_b = [0 0 0.1 0 0 0]'; % Box Body Twist
 
     Vb_Leefb = Adjoint(TransInv(TbLeef))*Vb_b;
     Vb_Reefb = Adjoint(TransInv(TbReef))*Vb_b;
+
     qdot_l = pinv(Jb_L)*(Vb_Leefb);
+    qdot_a = pinv(Jb_a)*(Vb_Leefb);
+
     Ha= Adjoint(TbLeef)*Jb_L; % Actuated Jacobian Matrix, q_a = q_l
     Hp= -Adjoint(TbReef)*Jb_R; % Passive Jacobian Matrix, q_p = q_r
     qdot_r= -pinv(Hp)*Ha*qdot_l;
+
+    AJb_L= Adjoint(TbLeef)*Jb_L; % Actuated Jacobian Matrix, q_a = q_l
+    AJb_R= Adjoint(TbReef)*Jb_R; % Actuated Jacobian Matrix, q_a = q_l
+    Ha = AJb_L(:,actuated_num);
+    Hp = [AJb_L(:,passive_num),-AJb_R];
+
+    qdot_p = -pinv(Hp)*Ha*qdot_a;
+    
     
     [q_l,qdot_l]=EulerStep(q_l,qdot_l,[0,0,0,0,0,0]',dt);
     [q_r,qdot_r]=EulerStep(q_r,qdot_r,[0,0,0,0,0,0]',dt);
+    [q_a,qdot_a]=EulerStep(q_a,qdot_a,zeros(size(q_a)),dt);
+    [q_p,qdot_p]=EulerStep(q_p,qdot_p,zeros(size(q_p)),dt);
+    q_l =[q_a(1) q_p(1) q_a(2) q_p(2) q_a(3) q_p(3)]';
+    q_r =q_p(4:end);
+    qdot_l = [qdot_a(1) qdot_p(1) qdot_a(2) qdot_p(2) qdot_a(3) qdot_p(3)]';
+    qdot_r = qdot_p(4:end);
     T_L = FKinSpace(Left_M,Left_Slist,q_l);
     T_R = FKinSpace(Right_M,Right_Slist,q_r);
     Jb_L = JacobianBody(Left_Blist,q_l);
     Jb_R = JacobianBody(Right_Blist,q_r);    
     
+    Vb_Reefb = Jb_R *qdot_r;
+    Vb_Leefb = Jb_L *qdot_l;
+    Vb_b = Adjoint((TbLeef))*Vb_Leefb;
+    Jb_a = Jb_L(:,actuated_num);
+    Jb_p = [Jb_L(:,passive_num),Jb_R];
+
     %% DRAW
     if step_count > 40
     cla
-    drawRobot(Left_M,Left_Slist,q_l,T0L,Left_p,"\{Leef\}","\{L\}",ax,[1,1,1,1,1,1])
+    drawRobot(Left_M,Left_Slist,q_l,T0L,Left_p,"\{Leef\}","\{L\}",ax,[1,2,1,2,1,2])
     drawRobot(Right_M,Right_Slist,q_r,T0R,Right_p,"\{Reef\}","\{R\}",ax,[2,2,2,2,2,2])
     width = 2;
     height = 2;
     drawBox(T0L*T_L*TransInv(TbLeef),width,height,ax)
     text(-2,6,0,"Vb_b = ["+string(Vb_b(1))+","+string(Vb_b(2))+","+string(Vb_b(3))+","+string(Vb_b(4))+","+string(Vb_b(5))+","+string(Vb_b(6))+"]")
     text(-2,6-0.5,0,"Vb_{Leef} = ["+string(Vb_Leefb(1))+","+string(Vb_Leefb(2))+","+string(Vb_Leefb(3))+","+string(Vb_Leefb(4))+","+string(Vb_Leefb(5))+","+string(Vb_Leefb(6))+"]")
+    text(-2,6-1.0,0,"Vb_{Reef} = ["+string(Vb_Reefb(1))+","+string(Vb_Reefb(2))+","+string(Vb_Reefb(3))+","+string(Vb_Reefb(4))+","+string(Vb_Reefb(5))+","+string(Vb_Reefb(6))+"]")
     hold(ax,"on")
     drawnow
     step_count = 0;
