@@ -32,18 +32,21 @@ M{3} = [1 0 0 0;
 Blist{1} = Adjoint(TransInv(M{1}))*Slist{1};
 Blist{2} = Adjoint(TransInv(M{2}))*Slist{2};
 Blist{3} = Adjoint(TransInv(M{3}))*Slist{3};
-TargetT = RpToTrans(eul2rotm([pi/6,0,0]),[0,0,0]')
-q0=IKinSpace(Slist{1},M{1},TargetT,[pi/4,-0.0,-pi/2]',0.01,0.001);
-q{1} = q0;
-q{2} = q0;
-q{3} = q0;
-
+TargetT = RpToTrans(eul2rotm([pi/6,0,0]),[0.01,0,0]')
+q01=IKinSpace(Slist{1},M{1},TargetT,[pi/4,-0.0,-pi/2]',0.01,0.001);
+q02=IKinSpace(Slist{2},M{2},TargetT,[pi/4,-0.0,-pi/2]',0.01,0.001);
+q03=IKinSpace(Slist{3},M{3},TargetT,[pi/4,-0.0,-pi/2]',0.01,0.001);
+q{1} = q01;
+q{2} = q02;
+q{3} = q03;
+VT = [0 0 0.1 0 0 0]';
 dt = 0.001
 endTime = 5
 drawCount = 0
 figure(1)
 ax = axes();
 hold(ax)
+
 for t = linspace(0,endTime,floor(endTime/dt))
     
     q_a = get_q_a(q);
@@ -61,7 +64,7 @@ for t = linspace(0,endTime,floor(endTime/dt))
     g = -pinv(Hp)*Ha;
     e1 = [0 1 0]';
     Ja = Jb{1}*[g(1,:); e1';g(2,:)]
-    VT = [0 0 -0.1 0 0 0]';
+    
     qdot_a = pinv(Ja)*VT;
     qdot_p = g*qdot_a;
     [q_a,qdot_a] = EulerStep(q_a,qdot_a,zeros(size(q_a)),dt);
