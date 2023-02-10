@@ -33,6 +33,7 @@ $$ v_T = J_T \tilde{J}_C \zeta ~~~~~~~~~~~ (2.3)$$
 만약 $J_T\tilde{J}_C\zeta$ 행렬이 rank가 떨어지면 **'mechanism이 singular이다.'**라고 한다. 다시말해서 어떤 task velocity $v_T$는 constraint에 의해서 어떤 방향으로는 움직일 수 없다.
 
   + Example: multiple fingers grasping a rigid payload
+![image](https://user-images.githubusercontent.com/53217819/215644958-ad73c4b0-93a2-4f12-9f7e-652c04b861d3.png)
 
 
 
