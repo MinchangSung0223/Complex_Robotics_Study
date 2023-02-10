@@ -1,0 +1,124 @@
+clear 
+base{1} = 0;
+base{2} = 2;
+l{1}=[1 0.8];
+l{2}=[1 0.8];
+q{1} = [pi/2 -pi/2]';
+q{2} = [pi/2 pi/2]';
+qdot{1} = [0.0 0.0 ]';
+qdot{2} = [0.0 0.0 ]';
+J = Jacobian(l,q);
+J_temp = J;
+Jc=ConstarintJacobian(J);
+v{1}= J{1}*qdot{1};
+v{2}= J{2}*qdot{2};
+L{1} = 0.2;
+L{2} = 0.2;
+theta{1} = 0;
+theta{2} = pi;
+thetadot{1} = 0;
+thetadot{2} = 0;
+vT{1} = v{1} + [-L{1}*sin(theta{1});L{1}*cos(theta{1})]*thetadot{1}
+vT{2}= v{2} + [-L{2}*sin(theta{2});L{2}*cos(theta{2})]*thetadot{2}
+HcT=PassiveConstarintJacobian(L,theta);
+OHcT = zeros(size(HcT));
+A = [eye(2);eye(2)]
+Ac = [0 0 ; eye(2); 0 0 ; eye(2)];
+tildeAc = null(Ac')';
+pinvA = pinv(A)
+tildeAcJc = tildeAc*Jc;
+Jc = tildeAc*[Jc HcT];
+tildeJc = null(Jc);
+
+W = [thetadot{1} ; thetadot{2}]
+HT = [diag([-L{1}*sin(theta{1}) L{1}*cos(theta{1})]); diag( [-L{2}*sin(theta{2}) L{2}*cos(theta{2})])]
+O = zeros(size(J{1}))
+J = [J{1} O ; O J{2}]
+
+JT = pinvA*[J HT];
+JTJC = JT*tildeJc;
+JTJC_no_passive = pinvA*J*null(tildeAcJc);
+hold on;
+
+
+% V=drawJacobian(1,1,J_temp{1})
+% V=drawJacobian(1,1,J_temp{2})
+% V=drawJacobian(1,1,JTJC)
+% V=drawJacobian(1,1,tildeAcJc)
+% V=drawJacobian(1,1,tildeAc*HcT)
+V=drawJacobian(1,1,JTJC)
+V=drawJacobian(1,1,JTJC_no_passive)
+
+
+
+
+
+drawRobot(l,q,base,v,vT,0.1)
+axis([-1.5 3.5 -1.5 3.5])
+daspect([1,1,1])
+
+function drawEllipsoid(J,color)
+    [U,SIGMA,V]=eig(J);
+    u1 = V(1,:)';
+    u2 = V(2,:)';
+    sigma1 = SIGMA(1,1);
+    sigma2 = SIGMA(2,2)
+    quiver([1],[1],[u1(1)*sigma1],[u1(2)*sigma1],0,color,'LineWidth',2,"MaxHeadSize",500)
+    quiver([1],[1],[u2(1)*sigma2],[u2(2)*sigma2],0,color,'LineWidth',2,"MaxHeadSize",500)
+    [X,Y] = calculateEllipse(1, 1, sigma1, sigma2, acos(u1'*[1,0]')*180/pi,100)
+    plot(X,Y,color)
+
+end
+
+function [X,Y] = calculateEllipse(x, y, a, b, angle, steps)
+    %# This functions returns points to draw an ellipse
+    %#
+    %#  @param x     X coordinate
+    %#  @param y     Y coordinate
+    %#  @param a     Semimajor axis
+    %#  @param b     Semiminor axis
+    %#  @param angle Angle of the ellipse (in degrees)
+    %#
+
+    narginchk(5, 6);
+    if nargin<6, steps = 36; end
+
+    beta = -angle * (pi / 180);
+    sinbeta = sin(beta);
+    cosbeta = cos(beta);
+
+    alpha = linspace(0, 360, steps)' .* (pi / 180);
+    sinalpha = sin(alpha);
+    cosalpha = cos(alpha);
+
+    X = x + (a * cosalpha * cosbeta - b * sinalpha * sinbeta);
+    Y = y + (a * cosalpha * sinbeta + b * sinalpha * cosbeta);
+
+    if nargout==1, X = [X Y]; end
+end
+function V=drawJacobian(x,y,J)
+    V = [];
+    F = [];
+    [m,n]=size(J)
+    qdot = randn(n,1000);
+    qdot2 = qdot.^2;
+    sumqdot2 = sum(qdot2,1);
+    qdot = qdot./sqrt(sumqdot2);
+    V = J*qdot;
+    F = pinv(J)'*qdot;
+    for j = 1:2:n-1
+        try
+            Vj = V(j,:)'+ x;
+            Vj_1 = V(j+1,:)'+ y;
+            Vk = convhull(Vj,Vj_1);
+            fill(Vj(Vk),Vj_1(Vk),'cyan','FaceAlpha',0.1,'LineStyle','--');
+        catch
+        end
+    end
+    try
+        Fx = F(1,:)'+ x;
+        Fy = F(2,:)'+ y;
+        Fk = convhull(Fx,Fy);
+        fill(Fx(Fk),Fy(Fk),'magenta','FaceAlpha',0.1,'LineStyle','--');
+        catcj
+end
